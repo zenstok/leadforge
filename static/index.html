@@ -1,0 +1,843 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeadForge — AI Sales Intelligence</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --bg: #0a0a0f;
+            --surface: #12121a;
+            --surface2: #1a1a2e;
+            --border: #2a2a3e;
+            --text: #e4e4ef;
+            --text-dim: #8888a0;
+            --accent: #6366f1;
+            --accent-glow: rgba(99, 102, 241, 0.3);
+            --green: #22c55e;
+            --yellow: #eab308;
+            --red: #ef4444;
+            --orange: #f97316;
+            --radius: 12px;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            line-height: 1.6;
+        }
+
+        /* Header */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 16px 32px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .logo-icon {
+            width: 36px;
+            height: 36px;
+            background: var(--accent);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+        .sponsor-tags {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .sponsor-tag {
+            font-size: 10px;
+            padding: 3px 8px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+        }
+
+        /* Main Layout */
+        .main {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 32px;
+        }
+
+        /* ICP Form */
+        .form-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+
+        .form-card h2 {
+            font-size: 18px;
+            margin-bottom: 4px;
+        }
+
+        .form-card .subtitle {
+            color: var(--text-dim);
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .form-group.full {
+            grid-column: 1 / -1;
+        }
+
+        .form-group label {
+            font-size: 13px;
+            font-weight: 500;
+            color: var(--text-dim);
+        }
+
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: var(--text);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .form-group input:focus,
+        .form-group textarea:focus {
+            border-color: var(--accent);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .btn {
+            padding: 12px 28px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: var(--accent);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5558e6;
+            box-shadow: 0 0 20px var(--accent-glow);
+        }
+
+        .btn-primary:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .form-actions {
+            margin-top: 20px;
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        /* Progress Bar */
+        .progress-section {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px 28px;
+            margin-bottom: 24px;
+            display: none;
+        }
+
+        .progress-section.active { display: block; }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .progress-header h3 { font-size: 15px; }
+
+        .progress-pct {
+            font-size: 14px;
+            color: var(--accent);
+            font-weight: 600;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: var(--surface2);
+            border-radius: 3px;
+            overflow: hidden;
+            margin-bottom: 12px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 3px;
+            transition: width 0.5s ease;
+            width: 0%;
+        }
+
+        .progress-msg {
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        .agent-status {
+            display: flex;
+            gap: 16px;
+            margin-top: 12px;
+        }
+
+        .agent-chip {
+            font-size: 11px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            transition: all 0.3s;
+        }
+
+        .agent-chip.active {
+            border-color: var(--accent);
+            color: var(--accent);
+            background: rgba(99, 102, 241, 0.1);
+        }
+
+        .agent-chip.done {
+            border-color: var(--green);
+            color: var(--green);
+            background: rgba(34, 197, 94, 0.1);
+        }
+
+        /* Results */
+        .results-section {
+            display: none;
+        }
+
+        .results-section.active { display: block; }
+
+        .results-tabs {
+            display: flex;
+            gap: 4px;
+            margin-bottom: 20px;
+        }
+
+        .tab-btn {
+            padding: 8px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid var(--border);
+            background: transparent;
+            color: var(--text-dim);
+            font-family: inherit;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* Lead Cards */
+        .lead-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 12px;
+            transition: border-color 0.2s;
+        }
+
+        .lead-card:hover {
+            border-color: var(--accent);
+        }
+
+        .lead-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 12px;
+        }
+
+        .lead-name {
+            font-size: 16px;
+            font-weight: 600;
+        }
+
+        .lead-website {
+            font-size: 12px;
+            color: var(--accent);
+            text-decoration: none;
+        }
+
+        .score-badge {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .score-circle {
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .grade-A .score-circle { background: rgba(34, 197, 94, 0.15); color: var(--green); border: 2px solid var(--green); }
+        .grade-B .score-circle { background: rgba(234, 179, 8, 0.15); color: var(--yellow); border: 2px solid var(--yellow); }
+        .grade-C .score-circle { background: rgba(249, 115, 22, 0.15); color: var(--orange); border: 2px solid var(--orange); }
+        .grade-D .score-circle { background: rgba(239, 68, 68, 0.15); color: var(--red); border: 2px solid var(--red); }
+
+        .grade-letter {
+            font-size: 20px;
+            font-weight: 800;
+        }
+
+        .grade-A .grade-letter { color: var(--green); }
+        .grade-B .grade-letter { color: var(--yellow); }
+        .grade-C .grade-letter { color: var(--orange); }
+        .grade-D .grade-letter { color: var(--red); }
+
+        .lead-details {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .detail-chip {
+            font-size: 11px;
+            padding: 3px 10px;
+            border-radius: 20px;
+            background: var(--surface2);
+            color: var(--text-dim);
+        }
+
+        .lead-reasons {
+            font-size: 13px;
+            color: var(--text-dim);
+        }
+
+        .lead-reasons li {
+            margin-left: 16px;
+            margin-bottom: 4px;
+        }
+
+        /* Email Cards */
+        .email-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            margin-bottom: 12px;
+        }
+
+        .email-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .email-to {
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .email-score {
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .email-subject {
+            font-size: 14px;
+            color: var(--accent);
+            font-weight: 500;
+            margin-bottom: 12px;
+            padding: 8px 12px;
+            background: rgba(99, 102, 241, 0.08);
+            border-radius: 6px;
+        }
+
+        .email-body {
+            font-size: 13px;
+            line-height: 1.7;
+            color: var(--text);
+            white-space: pre-wrap;
+            padding: 12px;
+            background: var(--surface2);
+            border-radius: 8px;
+        }
+
+        .email-hooks {
+            margin-top: 12px;
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+        }
+
+        .hook-chip {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: rgba(99, 102, 241, 0.1);
+            color: var(--accent);
+        }
+
+        /* Stats Bar */
+        .stats-bar {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+            display: none;
+        }
+
+        .stats-bar.active { display: grid; }
+
+        .stat-card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 16px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: 700;
+            color: var(--accent);
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-top: 4px;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .stats-bar { grid-template-columns: repeat(2, 1fr); }
+            .main { padding: 16px; }
+            .header { padding: 12px 16px; flex-direction: column; gap: 8px; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <div class="logo">
+        <div class="logo-icon">⚡</div>
+        LeadForge
+    </div>
+    <div class="sponsor-tags">
+        <span class="sponsor-tag">AgentField</span>
+        <span class="sponsor-tag">Bright Data</span>
+        <span class="sponsor-tag">Actionbook</span>
+        <span class="sponsor-tag">Evermind</span>
+        <span class="sponsor-tag">Qwen + TokenRouter</span>
+        <span class="sponsor-tag">Zeabur</span>
+    </div>
+</div>
+
+<div class="main">
+
+    <!-- ICP Form -->
+    <div class="form-card" id="formCard">
+        <h2>Define Your Ideal Customer</h2>
+        <p class="subtitle">Tell us who you're looking for and what you're selling. Our agent swarm handles the rest.</p>
+
+        <div class="form-grid">
+            <div class="form-group full">
+                <label>Describe your ideal customer (natural language)</label>
+                <textarea id="icpDesc" placeholder="e.g., Series A SaaS companies in fintech with 20-100 employees that use Python and are based in San Francisco..."></textarea>
+            </div>
+
+            <div class="form-group">
+                <label>Industry</label>
+                <input type="text" id="industry" placeholder="e.g., Fintech, Healthcare, E-commerce">
+            </div>
+
+            <div class="form-group">
+                <label>Company Size</label>
+                <input type="text" id="companySize" placeholder="e.g., 20-100 employees">
+            </div>
+
+            <div class="form-group">
+                <label>Funding Stage</label>
+                <select id="fundingStage">
+                    <option value="">Any</option>
+                    <option value="Pre-seed">Pre-seed</option>
+                    <option value="Seed">Seed</option>
+                    <option value="Series A">Series A</option>
+                    <option value="Series B">Series B</option>
+                    <option value="Series C+">Series C+</option>
+                    <option value="Bootstrapped">Bootstrapped</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label>Location</label>
+                <input type="text" id="location" placeholder="e.g., San Francisco, New York, Remote">
+            </div>
+
+            <div class="form-group">
+                <label>Tech Stack (comma-separated)</label>
+                <input type="text" id="techStack" placeholder="e.g., Python, React, AWS, PostgreSQL">
+            </div>
+
+            <div class="form-group">
+                <label>Keywords (comma-separated)</label>
+                <input type="text" id="keywords" placeholder="e.g., AI, automation, B2B, developer tools">
+            </div>
+
+            <div class="form-group full">
+                <label>Your Product Description</label>
+                <textarea id="productDesc" placeholder="Describe what you're selling. This is used to craft personalized outreach..."></textarea>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button class="btn btn-primary" id="startBtn" onclick="startPipeline()">
+                Launch Agent Swarm
+            </button>
+            <span id="formStatus" style="font-size: 13px; color: var(--text-dim);"></span>
+        </div>
+    </div>
+
+    <!-- Progress -->
+    <div class="progress-section" id="progressSection">
+        <div class="progress-header">
+            <h3>Agent Swarm Running</h3>
+            <span class="progress-pct" id="progressPct">0%</span>
+        </div>
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <p class="progress-msg" id="progressMsg">Initializing agents...</p>
+        <div class="agent-status">
+            <span class="agent-chip" id="chipScout">Scout</span>
+            <span class="agent-chip" id="chipResearch">Research</span>
+            <span class="agent-chip" id="chipQualifier">Qualifier</span>
+            <span class="agent-chip" id="chipOutreach">Outreach</span>
+            <span class="agent-chip" id="chipMemory">Memory</span>
+        </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-bar" id="statsBar">
+        <div class="stat-card">
+            <div class="stat-value" id="statLeads">0</div>
+            <div class="stat-label">Leads Found</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statResearched">0</div>
+            <div class="stat-label">Researched</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statQualified">0</div>
+            <div class="stat-label">Qualified</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value" id="statEmails">0</div>
+            <div class="stat-label">Emails Generated</div>
+        </div>
+    </div>
+
+    <!-- Results -->
+    <div class="results-section" id="resultsSection">
+        <div class="results-tabs">
+            <button class="tab-btn active" onclick="switchTab('leads')">Scored Leads</button>
+            <button class="tab-btn" onclick="switchTab('outreach')">Outreach Emails</button>
+        </div>
+
+        <div class="tab-content active" id="tab-leads"></div>
+        <div class="tab-content" id="tab-outreach"></div>
+    </div>
+
+</div>
+
+<script>
+    let currentRunId = null;
+    let pollInterval = null;
+
+    async function startPipeline() {
+        const btn = document.getElementById('startBtn');
+        btn.disabled = true;
+        btn.textContent = 'Launching...';
+
+        const techStack = document.getElementById('techStack').value
+            .split(',').map(s => s.trim()).filter(Boolean);
+        const keywords = document.getElementById('keywords').value
+            .split(',').map(s => s.trim()).filter(Boolean);
+
+        const payload = {
+            industry: document.getElementById('industry').value,
+            company_size: document.getElementById('companySize').value,
+            funding_stage: document.getElementById('fundingStage').value,
+            location: document.getElementById('location').value,
+            tech_stack: techStack,
+            keywords: keywords,
+            icp_description: document.getElementById('icpDesc').value,
+            product_description: document.getElementById('productDesc').value || 'Our AI-powered solution helps companies automate their workflows.',
+            max_leads: 10,
+            min_score: 30,
+        };
+
+        try {
+            const resp = await fetch('/api/pipeline/start', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+            });
+
+            const data = await resp.json();
+            currentRunId = data.run_id;
+
+            // Show progress
+            document.getElementById('progressSection').classList.add('active');
+            document.getElementById('formStatus').textContent = `Run ID: ${currentRunId}`;
+
+            // Start polling
+            pollInterval = setInterval(pollStatus, 2000);
+
+        } catch (err) {
+            btn.disabled = false;
+            btn.textContent = 'Launch Agent Swarm';
+            document.getElementById('formStatus').textContent = 'Error: ' + err.message;
+        }
+    }
+
+    async function pollStatus() {
+        if (!currentRunId) return;
+
+        try {
+            const resp = await fetch(`/api/pipeline/${currentRunId}/status`);
+            const status = await resp.json();
+
+            updateProgress(status);
+
+            if (status.status === 'complete' || status.status === 'error') {
+                clearInterval(pollInterval);
+                if (status.status === 'complete') {
+                    await loadResults();
+                }
+                document.getElementById('startBtn').disabled = false;
+                document.getElementById('startBtn').textContent = 'Launch Agent Swarm';
+            }
+        } catch (err) {
+            console.error('Poll error:', err);
+        }
+    }
+
+    function updateProgress(status) {
+        const pct = Math.round(status.progress * 100);
+        document.getElementById('progressPct').textContent = pct + '%';
+        document.getElementById('progressFill').style.width = pct + '%';
+        document.getElementById('progressMsg').textContent = status.message || '';
+
+        // Update stats
+        document.getElementById('statLeads').textContent = status.leads_found || 0;
+        document.getElementById('statResearched').textContent = status.leads_researched || 0;
+        document.getElementById('statQualified').textContent = status.leads_qualified || 0;
+        document.getElementById('statEmails').textContent = status.outreach_generated || 0;
+
+        // Update agent chips
+        const agentMap = {
+            'scouting': 'chipScout',
+            'researching': 'chipResearch',
+            'qualifying': 'chipQualifier',
+            'generating_outreach': 'chipOutreach',
+        };
+
+        const phases = ['scouting', 'researching', 'qualifying', 'generating_outreach'];
+        const currentIdx = phases.indexOf(status.status);
+
+        Object.values(agentMap).forEach(id => {
+            document.getElementById(id).className = 'agent-chip';
+        });
+
+        phases.forEach((phase, idx) => {
+            const chipId = agentMap[phase];
+            if (idx < currentIdx) {
+                document.getElementById(chipId).classList.add('done');
+            } else if (idx === currentIdx) {
+                document.getElementById(chipId).classList.add('active');
+            }
+        });
+
+        if (status.status === 'complete') {
+            Object.values(agentMap).forEach(id => {
+                document.getElementById(id).className = 'agent-chip done';
+            });
+            document.getElementById('chipMemory').className = 'agent-chip done';
+        }
+    }
+
+    async function loadResults() {
+        if (!currentRunId) return;
+
+        try {
+            const resp = await fetch(`/api/pipeline/${currentRunId}/results`);
+            const data = await resp.json();
+
+            document.getElementById('statsBar').classList.add('active');
+            document.getElementById('resultsSection').classList.add('active');
+
+            renderLeads(data.scores || []);
+            renderOutreach(data.outreach || []);
+
+        } catch (err) {
+            console.error('Results error:', err);
+        }
+    }
+
+    function renderLeads(scores) {
+        const container = document.getElementById('tab-leads');
+
+        if (!scores.length) {
+            container.innerHTML = '<p style="color: var(--text-dim); padding: 20px;">No leads scored yet.</p>';
+            return;
+        }
+
+        container.innerHTML = scores.map(s => `
+            <div class="lead-card grade-${s.grade}">
+                <div class="lead-header">
+                    <div>
+                        <div class="lead-name">${s.name}</div>
+                        <a href="${s.website}" target="_blank" class="lead-website">${s.website}</a>
+                    </div>
+                    <div class="score-badge">
+                        <span class="grade-letter">${s.grade}</span>
+                        <div class="score-circle">${Math.round(s.score)}</div>
+                    </div>
+                </div>
+                <div class="lead-details">
+                    <span class="detail-chip">${s.priority} priority</span>
+                    ${s.research?.industry ? `<span class="detail-chip">${s.research.industry}</span>` : ''}
+                    ${s.research?.size ? `<span class="detail-chip">${s.research.size}</span>` : ''}
+                    ${s.research?.location ? `<span class="detail-chip">${s.research.location}</span>` : ''}
+                    ${(s.research?.tech_stack || []).slice(0, 4).map(t =>
+                        `<span class="detail-chip">${t}</span>`
+                    ).join('')}
+                </div>
+                <div class="lead-reasons">
+                    <strong style="font-size: 12px; color: var(--green);">Why they fit:</strong>
+                    <ul>${(s.fit_reasons || []).map(r => `<li>${r}</li>`).join('')}</ul>
+                </div>
+                ${s.concerns?.length ? `
+                <div class="lead-reasons" style="margin-top: 8px;">
+                    <strong style="font-size: 12px; color: var(--orange);">Concerns:</strong>
+                    <ul>${s.concerns.map(c => `<li>${c}</li>`).join('')}</ul>
+                </div>` : ''}
+                ${s.recommended_approach ? `
+                <p style="margin-top: 8px; font-size: 12px; color: var(--accent);">
+                    Approach: ${s.recommended_approach}
+                </p>` : ''}
+            </div>
+        `).join('');
+    }
+
+    function renderOutreach(sequences) {
+        const container = document.getElementById('tab-outreach');
+
+        if (!sequences.length) {
+            container.innerHTML = '<p style="color: var(--text-dim); padding: 20px;">No outreach generated yet.</p>';
+            return;
+        }
+
+        container.innerHTML = sequences.map(seq => `
+            <div style="margin-bottom: 24px;">
+                <h3 style="margin-bottom: 12px; font-size: 16px;">
+                    ${seq.lead_name}
+                    <span style="font-size: 12px; color: var(--text-dim); font-weight: 400;">
+                        Score: ${Math.round(seq.lead_score)}
+                    </span>
+                </h3>
+                ${seq.emails.map((email, idx) => `
+                    <div class="email-card">
+                        <div class="email-meta">
+                            <span class="email-to">Email ${idx + 1} of ${seq.emails.length}</span>
+                            <span class="email-score">${email.call_to_action}</span>
+                        </div>
+                        <div class="email-subject">Subject: ${email.subject}</div>
+                        <div class="email-body">${email.body}</div>
+                        <div class="email-hooks">
+                            ${(email.personalization_hooks || []).map(h =>
+                                `<span class="hook-chip">${h}</span>`
+                            ).join('')}
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `).join('');
+    }
+
+    function switchTab(tab) {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+        event.target.classList.add('active');
+        document.getElementById('tab-' + tab).classList.add('active');
+    }
+</script>
+
+</body>
+</html>
