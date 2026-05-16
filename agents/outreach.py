@@ -43,7 +43,9 @@ class OutreachAgent:
     def __init__(self):
         api_key = os.getenv("TOKENROUTER_API_KEY", "")
         base_url = os.getenv("TOKENROUTER_BASE_URL", "https://api.tokenrouter.com/v1")
-        model = os.getenv("QWEN_MODEL", "qwen-plus")
+        model = os.getenv("QWEN_MODEL", "deepseek/deepseek-v4-pro")
+
+        print(f"[Outreach] Model: {model}, Base URL: {base_url}, Key set: {bool(api_key)}", flush=True)
 
         self.client = AsyncOpenAI(
             api_key=api_key,
@@ -113,28 +115,48 @@ Tone for this email: {tone_map.get(email_number, tone_map[1])}
 
 Write a compelling, personalized email."""
 
-        try:
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.7,
-                max_tokens=600,
-            )
+        import asyncio
 
-            content = response.choices[0].message.content.strip()
+        for attempt in range(3):
+            try:
+                print(f"[Outreach] LLM call for {lead.name} email#{email_number} (attempt {attempt+1}/3)", flush=True)
+                response = await asyncio.wait_for(
+                    self.client.chat.completions.create(
+                        model=self.model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        temperature=0.7,
+                        max_tokens=600,
+                    ),
+                    timeout=30.0,
+                )
 
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
+                content = response.choices[0].message.content.strip()
+                print(f"[Outreach] LLM response received ({len(content)} chars)", flush=True)
 
-            return json.loads(content)
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
 
-        except Exception as e:
-            print(f"[Outreach] Email generation error for {lead.name}: {e}")
+                return json.loads(content)
+
+            except asyncio.TimeoutError:
+                print(f"[Outreach] LLM TIMEOUT for {lead.name} (attempt {attempt+1})", flush=True)
+                if attempt < 2:
+                    await asyncio.sleep(2 * (attempt + 1))
+                continue
+            except json.JSONDecodeError as e:
+                print(f"[Outreach] JSON parse error: {e}. Raw: {content[:200]}", flush=True)
+                break
+            except Exception as e:
+                print(f"[Outreach] LLM EXCEPTION for {lead.name}: {type(e).__name__}: {e}", flush=True)
+                import traceback; traceback.print_exc()
+                if attempt < 2:
+                    await asyncio.sleep(2 * (attempt + 1))
+                continue
             return {
                 "subject": f"Quick question about {lead.name}",
                 "body": f"Hi,\n\nI noticed {lead.name} and thought our solution might be relevant.\n\nWould you be open to a quick chat?\n\nBest",

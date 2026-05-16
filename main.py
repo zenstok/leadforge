@@ -24,6 +24,8 @@ from agents.scout import ICPCriteria
 orchestrator: LeadForgeOrchestrator | None = None
 pipeline_runs: dict[str, PipelineResult] = {}
 pipeline_tasks: dict[str, asyncio.Task] = {}
+pipeline_orchestrators: dict[str, LeadForgeOrchestrator] = {}
+pipeline_statuses: dict[str, PipelineStatus] = {}
 
 
 @asynccontextmanager
@@ -109,13 +111,19 @@ async def start_pipeline(request: PipelineRequest):
         min_score=request.min_score,
     )
 
+    # Each run gets its own orchestrator to avoid shared state
+    run_orchestrator = LeadForgeOrchestrator()
+
     # Run pipeline in background
     async def _run():
-        result = await orchestrator.run_pipeline(config)
+        result = await run_orchestrator.run_pipeline(config)
         pipeline_runs[run_id] = result
+        # Store status for polling
+        pipeline_statuses[run_id] = run_orchestrator.status
 
     task = asyncio.create_task(_run())
     pipeline_tasks[run_id] = task
+    pipeline_orchestrators[run_id] = run_orchestrator
 
     return PipelineResponse(
         run_id=run_id,
@@ -127,11 +135,13 @@ async def start_pipeline(request: PipelineRequest):
 @app.get("/api/pipeline/{run_id}/status")
 async def get_pipeline_status(run_id: str):
     """Get the current status of a pipeline run."""
+    # Check completed runs first
     if run_id in pipeline_runs:
         return pipeline_runs[run_id].status.model_dump()
 
-    if orchestrator:
-        return orchestrator.status.model_dump()
+    # Check running orchestrators
+    if run_id in pipeline_orchestrators:
+        return pipeline_orchestrators[run_id].status.model_dump()
 
     return PipelineStatus(status="unknown", message="Run not found").model_dump()
 

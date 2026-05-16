@@ -9,6 +9,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy application
 COPY . .
 
+# Disable Python output buffering so logs show immediately
+ENV PYTHONUNBUFFERED=1
+
 # Expose port
 EXPOSE 8000
 

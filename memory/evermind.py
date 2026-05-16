@@ -22,11 +22,17 @@ class EvermindMemory:
     """
 
     def __init__(self):
-        self.api_url = os.getenv("EVERMIND_API_URL", "http://localhost:1995/api/v1")
+        self.api_url = os.getenv("EVERMIND_API_URL", "")
         self.api_key = os.getenv("EVERMIND_API_KEY", "")
         self.http_client: Optional[httpx.AsyncClient] = None
         # In-memory fallback when Evermind is unavailable
         self._local_store: dict[str, dict] = {}
+        self._evermind_available = bool(self.api_url)
+
+        if self._evermind_available:
+            print(f"[Memory] Evermind configured at {self.api_url}")
+        else:
+            print("[Memory] Evermind not configured — using in-memory store (data resets on restart)")
 
     async def _get_client(self) -> httpx.AsyncClient:
         if self.http_client is None or self.http_client.is_closed:
@@ -35,12 +41,18 @@ class EvermindMemory:
 
     async def store(self, category: str, key: str, data: dict, user_id: str = "leadforge") -> bool:
         """Store a memory in Evermind."""
-        client = await self._get_client()
+        if not self._evermind_available:
+            store_key = f"{category}:{key}"
+            self._local_store[store_key] = {
+                "data": data,
+                "stored_at": datetime.now(timezone.utc).isoformat(),
+            }
+            print(f"[Memory] Stored locally: {category}/{key}")
+            return True
 
+        client = await self._get_client()
         memory_content = json.dumps({
-            "category": category,
-            "key": key,
-            "data": data,
+            "category": category, "key": key, "data": data,
             "stored_at": datetime.now(timezone.utc).isoformat(),
         })
 
@@ -75,6 +87,18 @@ class EvermindMemory:
 
     async def recall(self, query: str, user_id: str = "leadforge", category: str = "") -> list[dict]:
         """Search memories in Evermind."""
+        if not self._evermind_available:
+            # Search local store
+            results = []
+            query_lower = query.lower()
+            for store_key, value in self._local_store.items():
+                if category and not store_key.startswith(category):
+                    continue
+                data_str = json.dumps(value.get("data", {})).lower()
+                if query_lower in data_str or any(word in data_str for word in query_lower.split()):
+                    results.append(value["data"])
+            return results
+
         client = await self._get_client()
 
         try:

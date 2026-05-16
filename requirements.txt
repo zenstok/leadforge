@@ -6,4 +6,4 @@ openai==1.82.0
 pydantic==2.11.3
 jinja2==3.1.6
 aiofiles==24.1.0
-brightdata-sdk==1.1.0
+brightdata-sdk>=2.3.0

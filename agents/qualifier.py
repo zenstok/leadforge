@@ -40,7 +40,14 @@ class QualifierAgent:
     def __init__(self):
         api_key = os.getenv("TOKENROUTER_API_KEY", "")
         base_url = os.getenv("TOKENROUTER_BASE_URL", "https://api.tokenrouter.com/v1")
-        model = os.getenv("QWEN_MODEL", "qwen-plus")
+        model = os.getenv("QWEN_MODEL", "deepseek/deepseek-v4-pro")
+
+        print(f"[Qualifier] ========== INIT ==========", flush=True)
+        print(f"[Qualifier] API key set: {bool(api_key)}", flush=True)
+        if api_key:
+            print(f"[Qualifier] API key prefix: {api_key[:12]}...", flush=True)
+        print(f"[Qualifier] Base URL: {base_url}", flush=True)
+        print(f"[Qualifier] Model: {model}", flush=True)
 
         self.client = AsyncOpenAI(
             api_key=api_key,
@@ -94,29 +101,50 @@ Respond ONLY with valid JSON in this exact format:
 
 Evaluate this company against the ICP and provide your scoring."""
 
-        try:
-            response = await self.client.chat.completions.create(
-                model=self.model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_prompt},
-                ],
-                temperature=0.3,
-                max_tokens=500,
-            )
+        import asyncio
 
-            content = response.choices[0].message.content.strip()
+        # Retry up to 3 times with backoff
+        for attempt in range(3):
+            try:
+                print(f"[Qualifier] LLM call for {research.name} (attempt {attempt+1}/3)", flush=True)
+                response = await asyncio.wait_for(
+                    self.client.chat.completions.create(
+                        model=self.model,
+                        messages=[
+                            {"role": "system", "content": system_prompt},
+                            {"role": "user", "content": user_prompt},
+                        ],
+                        temperature=0.3,
+                        max_tokens=500,
+                    ),
+                    timeout=30.0,
+                )
 
-            # Parse JSON from response (handle markdown code blocks)
-            if "```json" in content:
-                content = content.split("```json")[1].split("```")[0].strip()
-            elif "```" in content:
-                content = content.split("```")[1].split("```")[0].strip()
+                content = response.choices[0].message.content.strip()
+                print(f"[Qualifier] LLM response received ({len(content)} chars)", flush=True)
 
-            return json.loads(content)
+                # Parse JSON from response (handle markdown code blocks)
+                if "```json" in content:
+                    content = content.split("```json")[1].split("```")[0].strip()
+                elif "```" in content:
+                    content = content.split("```")[1].split("```")[0].strip()
 
-        except Exception as e:
-            print(f"[Qualifier] LLM scoring error for {research.name}: {e}")
+                return json.loads(content)
+
+            except asyncio.TimeoutError:
+                print(f"[Qualifier] LLM TIMEOUT for {research.name} (attempt {attempt+1})", flush=True)
+                if attempt < 2:
+                    await asyncio.sleep(2 * (attempt + 1))
+                continue
+            except json.JSONDecodeError as e:
+                print(f"[Qualifier] JSON parse error: {e}. Raw: {content[:200]}", flush=True)
+                break
+            except Exception as e:
+                print(f"[Qualifier] LLM EXCEPTION for {research.name}: {type(e).__name__}: {e}", flush=True)
+                import traceback; traceback.print_exc()
+                if attempt < 2:
+                    await asyncio.sleep(2 * (attempt + 1))
+                continue
             return {
                 "score": 50,
                 "grade": "C",
